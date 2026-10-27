@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import ThreeBoard from "./ThreeBoard";
 
-type Token = { id: string; name: string; kind: "hero" | "foe"; x: number; y: number; initials: string; color: string; hp: number };
+type Token = { id: string; name: string; kind: "hero" | "foe"; x: number; y: number; initials: string; color: string; hp: number; image?: string };
 type LogEntry = { id: number; text: string; tone?: "gold" | "red" };
 
 const initialTokens: Token[] = [
@@ -32,6 +33,13 @@ export default function App() {
   const [fog, setFog] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showGM, setShowGM] = useState(true);
+  const [is3D, setIs3D] = useState(true);
+  const [sceneType, setSceneType] = useState<"Dungeon" | "Forest" | "Village">("Dungeon");
+  const [showCharacterCreator, setShowCharacterCreator] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newKind, setNewKind] = useState<"hero" | "foe">("hero");
+  const [newColor, setNewColor] = useState("#d8a4a0");
+  const [newImage, setNewImage] = useState<string | undefined>();
 
   const selected = tokens.find((token) => token.id === selectedId) ?? tokens[0];
   const addLog = (text: string, tone?: "gold" | "red") => {
@@ -92,14 +100,14 @@ export default function App() {
           <div className="scene-toolbar">
             <div className="scene-title"><span className="mini-emblem">✧</span><div><strong>{activeTab === "scene" ? "THE ASHEN VAULT" : "ADVENTURE JOURNAL"}</strong><small>{activeTab === "scene" ? "RUINS · LEVEL 1 · ENCOUNTER 01" : "SESSION NOTES & DISCOVERIES"}</small></div></div>
             <div className="toolbar-actions">
-              <button className={showGrid ? "tool-button chosen" : "tool-button"} onClick={() => setShowGrid(!showGrid)}><Icon>▦</Icon> Grid</button>
+              <button className={is3D ? "tool-button chosen" : "tool-button"} onClick={() => setIs3D(!is3D)}><Icon>◇</Icon> {is3D ? "3D Board" : "2D Board"}</button><select className="scene-select" aria-label="Choose scene" value={sceneType} onChange={event => setSceneType(event.target.value as "Dungeon" | "Forest" | "Village")}><option>Dungeon</option><option>Forest</option><option>Village</option></select><button className={showGrid ? "tool-button chosen" : "tool-button"} onClick={() => setShowGrid(!showGrid)}><Icon>▦</Icon> Grid</button>
               <button className={fog ? "tool-button chosen" : "tool-button"} onClick={() => setFog(!fog)}><Icon>◒</Icon> Fog</button>
               <button className="tool-button" onClick={() => addLog("Map controls are ready for the next build.")}><Icon>⛶</Icon> Fit map</button>
             </div>
           </div>
 
           {activeTab === "scene" ? (
-            <section className={`map-stage ${showGrid ? "with-grid" : ""} ${fog ? "fog-on" : ""}`} aria-label="Interactive tabletop map">
+            is3D ? <ThreeBoard tokens={tokens} selectedId={selectedId} onSelect={setSelectedId} onMove={(id, x, y) => { setTokens(current => current.map(token => token.id === id ? { ...token, x, y } : token)); addLog(`${tokens.find(token => token.id === id)?.name ?? "Token"} moves across the board.`); }} sceneType={sceneType} showGrid={showGrid} fog={fog} /> : <section className={`map-stage ${showGrid ? "with-grid" : ""} ${fog ? "fog-on" : ""}`} aria-label="Interactive tabletop map">
               <div className="map-label"><span className="map-pin">✦</span><span>ASHEN VAULT</span><i>•</i><span>LOWER CHAMBER</span></div>
               <div className="map-art">
                 <div className="stone-ring ring-one" /><div className="stone-ring ring-two" />
@@ -114,7 +122,7 @@ export default function App() {
                   const y = Math.floor(index / 18);
                   const token = tokens.find((item) => item.x === x && item.y === y);
                   return <button key={index} role="gridcell" aria-label={`Tile ${String.fromCharCode(65 + x)}${y + 1}${token ? `, ${token.name}` : ""}`} className={`tile ${token ? "has-token" : ""} ${token?.id === selectedId ? "selected-tile" : ""}`} onClick={() => token ? setSelectedId(token.id) : moveToken(x, y)} title={token ? token.name : `Move to ${String.fromCharCode(65 + x)}${y + 1}`}>
-                    {token && <span className={`token ${token.kind} ${token.id === selectedId ? "token-selected" : ""}`} style={{ "--token-color": token.color } as CSSProperties}><span className="token-initials">{token.initials}</span><span className="token-name">{token.name}</span></span>}
+                    {token && <span className={`token ${token.kind} ${token.id === selectedId ? "token-selected" : ""}`} style={{ "--token-color": token.color } as CSSProperties}>{token.image ? <img className="token-image" src={token.image} alt="" /> : <span className="token-initials">{token.initials}</span>}<span className="token-name">{token.name}</span></span>}
                   </button>;
                 })}
               </div>
@@ -140,10 +148,10 @@ export default function App() {
         </main>
 
         {showGM && <aside className="right-panel">
-          <div className="panel-heading"><div><span className="eyebrow">YOUR ADVENTURERS</span><h2>Party & encounter</h2></div><button className="more-button" onClick={() => addLog("Party options are coming soon.")}>···</button></div>
+          <div className="panel-heading"><div><span className="eyebrow">YOUR ADVENTURERS</span><h2>Party & encounter</h2></div><button className="more-button" onClick={() => setShowCharacterCreator(true)} title="Create a character">＋</button></div>
           <div className="party-list">
             {tokens.filter((token) => token.kind === "hero").map((token, index) => <button key={token.id} className={`party-card ${token.id === selectedId ? "party-selected" : ""}`} onClick={() => setSelectedId(token.id)}>
-              <span className="party-avatar" style={{ "--token-color": token.color } as React.CSSProperties}>{token.initials}</span><span className="party-info"><strong>{token.name}</strong><small>{index === 0 ? "ELF · RANGER" : "DWARF · FIGHTER"}</small><span className="hp-track"><i style={{ width: `${Math.max(0, token.hp / (token.id === "brom" ? 24 : 18) * 100)}%` }} /></span></span><span className="hp-number">{token.hp}<small>HP</small></span>
+              <span className="party-avatar" style={{ "--token-color": token.color } as React.CSSProperties}>{token.image ? <img className="party-image" src={token.image} alt="" /> : token.initials}</span><span className="party-info"><strong>{token.name}</strong><small>{index === 0 ? "ELF · RANGER" : "DWARF · FIGHTER"}</small><span className="hp-track"><i style={{ width: `${Math.max(0, token.hp / (token.id === "brom" ? 24 : 18) * 100)}%` }} /></span></span><span className="hp-number">{token.hp}<small>HP</small></span>
             </button>)}
           </div>
           <div className="panel-divider" />
@@ -156,6 +164,7 @@ export default function App() {
           <div className="selected-footer"><div className="selected-label"><span className="eyebrow">SELECTED TOKEN</span><strong>{selected?.name ?? "None selected"}</strong></div><div className="selected-coordinate"><span className="eyebrow">POSITION</span><strong>{selectedCell}</strong></div></div>
         </aside>}
       </div>
+      {showCharacterCreator && <div className="modal-backdrop" role="presentation" onClick={event => { if(event.target===event.currentTarget)setShowCharacterCreator(false); }}><form className="character-modal" onSubmit={event => {event.preventDefault();const name=newName.trim();if(!name)return;const id=`custom-${Date.now()}`;setTokens(current=>[...current,{id,name,kind:newKind,x:Math.min(17,2+current.length*2),y:Math.min(11,2+current.length),initials:name.split(/\s+/).map(part=>part[0]).join("").slice(0,2).toUpperCase(),color:newColor,hp:newKind==="hero"?18:8,image:newImage}]);setSelectedId(id);setShowCharacterCreator(false);setNewName("");setNewImage(undefined);addLog(`${name} joins the scene.`,"gold");}}><div className="modal-top"><span className="eyebrow">CHARACTER WORKSHOP</span><button type="button" className="modal-close" onClick={()=>setShowCharacterCreator(false)}>×</button></div><h2>Create a character</h2><p>Make a hero or foe and give them a portrait token.</p><label>Character name<input autoFocus value={newName} onChange={event=>setNewName(event.target.value)} placeholder="e.g. Mira Starfall" maxLength={32} required /></label><label>Role<select value={newKind} onChange={event=>setNewKind(event.target.value as "hero"|"foe")}><option value="hero">Hero / party member</option><option value="foe">Enemy / creature</option></select></label><label>Token accent<input type="color" value={newColor} onChange={event=>setNewColor(event.target.value)} /></label><label>Portrait / token image<input type="file" accept="image/*" onChange={event=>{const file=event.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){addLog("Please choose an image smaller than 5 MB.");event.target.value="";return;}const reader=new FileReader();reader.onload=()=>setNewImage(String(reader.result));reader.readAsDataURL(file);}} /></label>{newImage&&<div className="portrait-preview"><img src={newImage} alt="Token preview" /><span>Portrait ready</span><button type="button" onClick={()=>setNewImage(undefined)}>Remove</button></div>}<div className="modal-actions"><button type="button" className="tool-button" onClick={()=>setShowCharacterCreator(false)}>Cancel</button><button type="submit" className="primary-button">Create character <span>→</span></button></div></form></div>}
       <footer className="app-footer"><span>✦ EMBERKEEP <i>BUILD 0.1 · PROTOTYPE</i></span><span>MADE FOR ADVENTURE <b>◆</b></span></footer>
     </div>
   );
