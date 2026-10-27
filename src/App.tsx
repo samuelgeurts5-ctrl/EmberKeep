@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 type Token = { id: string; name: string; kind: "hero" | "foe"; x: number; y: number; initials: string; color: string; hp: number };
 type LogEntry = { id: number; text: string; tone?: "gold" | "red" };
@@ -17,7 +18,7 @@ const initialLog: LogEntry[] = [
   { id: 3, text: "A goblin shifts behind a broken pillar." },
 ];
 
-function Icon({ children }: { children: React.ReactNode }) {
+function Icon({ children }: { children: ReactNode }) {
   return <span className="icon" aria-hidden="true">{children}</span>;
 }
 
@@ -113,7 +114,7 @@ export default function App() {
                   const y = Math.floor(index / 18);
                   const token = tokens.find((item) => item.x === x && item.y === y);
                   return <button key={index} role="gridcell" aria-label={`Tile ${String.fromCharCode(65 + x)}${y + 1}${token ? `, ${token.name}` : ""}`} className={`tile ${token ? "has-token" : ""} ${token?.id === selectedId ? "selected-tile" : ""}`} onClick={() => token ? setSelectedId(token.id) : moveToken(x, y)} title={token ? token.name : `Move to ${String.fromCharCode(65 + x)}${y + 1}`}>
-                    {token && <span className={`token ${token.kind} ${token.id === selectedId ? "token-selected" : ""}`} style={{ "--token-color": token.color } as React.CSSProperties}><span className="token-initials">{token.initials}</span><span className="token-name">{token.name}</span></span>}
+                    {token && <span className={`token ${token.kind} ${token.id === selectedId ? "token-selected" : ""}`} style={{ "--token-color": token.color } as CSSProperties}><span className="token-initials">{token.initials}</span><span className="token-name">{token.name}</span></span>}
                   </button>;
                 })}
               </div>
